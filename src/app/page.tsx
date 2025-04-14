@@ -1,103 +1,180 @@
-import Image from "next/image";
+// File: src/app/page.tsx
+'use client';
 
-export default function Home() {
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Sun, Moon } from 'lucide-react';
+import axios from 'axios';
+
+interface NewsArticle {
+  title: string;
+  summary?: string;
+  url: string;
+  sentiment?: string;
+  source?: string;
+  publishedAt: string;
+}
+
+interface TickerOption {
+  symbol: string;
+  name: string;
+}
+
+export default function Dashboard() {
+  const [darkMode, setDarkMode] = useState(true);
+  const [query, setQuery] = useState('');
+  const [news, setNews] = useState<NewsArticle[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [tickers, setTickers] = useState<TickerOption[]>([]);
+  const [filteredTickers, setFilteredTickers] = useState<TickerOption[]>([]);
+
+  const fetchTickers = async () => {
+    try {
+      const res = await axios.get('/tickers.json');
+      setTickers(res.data);
+    } catch (err) {
+      console.error('Failed to fetch tickers.');
+    }
+  };
+
+  const fetchNews = async (customQuery?: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      const searchQuery = customQuery || query || 'stock market';
+      const res = await axios.get(`/api/news?q=${searchQuery}`);
+      setNews(res.data.articles);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error fetching news');
+    }
+    setLoading(false);
+  };
+
+  const summarizeArticles = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const summaries = await Promise.all(
+        news.map(async (article) => {
+          try {
+            const res = await axios.post('/api/summarize', {
+              text: article.title + '. ' + (article.summary || '')
+            });
+            return {
+              ...article,
+              summary: res.data.summary,
+              sentiment: res.data.sentiment,
+            };
+          } catch {
+            return article;
+          }
+        })
+      );
+      setNews(summaries);
+    } catch (err: any) {
+      setError('Failed to re-summarize articles.');
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchNews();
+    fetchTickers();
+  }, []);
+
+  useEffect(() => {
+    if (!query.trim()) return setFilteredTickers([]);
+    const filtered = tickers.filter((t) =>
+      t.symbol.toLowerCase().includes(query.toLowerCase()) ||
+      t.name.toLowerCase().includes(query.toLowerCase())
+    ).slice(0, 10);
+    setFilteredTickers(filtered);
+  }, [query, tickers]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className={darkMode ? 'bg-gray-900 text-white min-h-screen' : 'bg-white text-black min-h-screen'}>
+      <div className="p-4 flex justify-between items-center">
+      <h1 className="text-4xl font-extrabold mb-6 text-center bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">
+        MarketMind – AI Stock & News Companion
+      </h1>
+        <div className="flex gap-2 items-center">
+          <Sun />
+          <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+          <Moon />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+
+      <div className="p-4 flex gap-2 items-center flex-wrap relative">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Enter stock ticker (e.g., AAPL)"
+          className="w-64 rounded-xl border border-gray-300"
+        />
+        <Button onClick={() => fetchNews()} className="rounded-xl px-6 py-2 font-semibold">Search</Button>
+        <Button variant="outline" onClick={summarizeArticles}>
+          Summarize Sentiment
+        </Button>
+
+        {filteredTickers.length > 0 && (
+          <div className={`absolute top-full mt-1 w-64 rounded shadow z-10 border ${darkMode ? 'bg-gray-800 text-white border-gray-600' : 'bg-white text-black border-gray-300'}`}>
+            {filteredTickers.map((ticker) => (
+              <div
+                key={ticker.symbol}
+                className={`px-3 py-2 cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+                onClick={() => {
+                  setQuery(ticker.symbol);
+                  setFilteredTickers([]);
+                  fetchNews(ticker.symbol);
+                }}
+              >
+                {ticker.symbol} - {ticker.name}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {loading && <p className="p-4">Loading...</p>}
+      {error && <p className="p-4 text-red-500">{error}</p>}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+        {news.map((article, i) => (
+          <Card
+            key={i}
+            className={`transition duration-300 transform hover:scale-[1.02] ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}
+          >
+            <CardContent>
+              <a href={article.url} target="_blank" rel="noopener noreferrer">
+                <h2 className="font-semibold text-lg hover:underline">{article.title}</h2>
+              </a>
+              <p className="text-sm mt-2">
+                {article.summary || 'No summary available. Click "Summarize Sentiment" to generate one.'}
+              </p>
+              {article.sentiment && (
+                <p
+                  className={`mt-2 font-medium ${
+                    article.sentiment === 'Positive'
+                      ? 'text-green-400'
+                      : article.sentiment === 'Negative'
+                      ? 'text-red-400'
+                      : 'text-yellow-400'
+                  }`}
+                >
+                  Sentiment: {article.sentiment}
+                </p>
+              )}
+              <p className="text-xs mt-2 text-gray-400">
+                {article.source || 'Unknown source'} • {new Date(article.publishedAt).toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
