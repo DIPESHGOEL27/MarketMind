@@ -17,6 +17,12 @@
 
 </div>
 
+## Screenshots
+
+![MarketMind_Dashboard](Screenshots/MarketMind_Dashboard.png)
+
+
+![News](Screenshots/News.png)
 ---
 
 ## 🚀 **Technical Achievements**
