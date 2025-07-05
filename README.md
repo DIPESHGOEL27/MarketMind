@@ -431,41 +431,6 @@ supabase db push
 - XSS protection
 
 
-## 📚 Documentation
-
-- [API Documentation](docs/api.md)
-- [Component Library](docs/components.md)
-- [Database Schema](docs/database.md)
-- [Deployment Guide](docs/deployment.md)
-- [Contributing Guide](CONTRIBUTING.md)
-
----
-
-## 🗓️ Roadmap
-
-### **Q1 2025**
-
-- [ ] Mobile app development (React Native)
-- [ ] Advanced portfolio optimization
-- [ ] Social trading features
-- [ ] Multi-language support
-
-### **Q2 2025**
-
-- [ ] Options trading analysis
-- [ ] Cryptocurrency integration
-- [ ] Advanced charting tools
-- [ ] API marketplace
-
-### **Q3 2025**
-
-- [ ] Machine learning model improvements
-- [ ] Real-time collaboration features
-- [ ] Advanced risk management
-- [ ] Institutional features
-
----
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
