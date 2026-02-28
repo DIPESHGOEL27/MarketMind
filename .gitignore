@@ -1,0 +1,42 @@
+# Environment variables (contain secrets)
+.env
+*.env
+!.env.example
+
+# Go
+marketmind-backend/marketmind-backend
+marketmind-backend/marketmind-backend.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Node / Next.js
+marketmind-frontend/node_modules/
+marketmind-frontend/.next/
+marketmind-frontend/out/
+marketmind-frontend/.vercel
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Debug / temp
+*.log
+tmp/
+raw_*.html
+*.mhtml
