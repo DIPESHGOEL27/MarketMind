@@ -3,7 +3,8 @@ import type { NextConfig } from "next";
 const API_BACKEND = process.env.API_BACKEND_URL || "http://localhost:8080";
 
 const nextConfig: NextConfig = {
-  output: "standalone", // Enables optimized Docker builds
+  // "standalone" is for Docker only — Vercel ignores/overrides this automatically
+  ...(process.env.DOCKER === "true" ? { output: "standalone" as const } : {}),
   async rewrites() {
     return [
       {

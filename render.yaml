@@ -1,0 +1,25 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploy: Dashboard > New > Blueprint > Connect this repo
+
+services:
+  - type: web
+    name: marketmind-backend
+    runtime: docker
+    dockerfilePath: ./marketmind-backend/Dockerfile
+    dockerContext: ./marketmind-backend
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: FINNHUB_API_KEY
+        sync: false
+      - key: NEWSAPI_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true  # Auto-generate a secure random value
+      - key: CORS_ORIGINS
+        value: https://market-mind-dashboard.vercel.app
+      - key: PORT
+        value: "8080"
