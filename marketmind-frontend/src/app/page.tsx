@@ -51,7 +51,7 @@ interface MarketIndexData {
 
 // ---------- Constants ----------
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 // ---------- Main Dashboard Component ----------
 
@@ -282,7 +282,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-900 text-white">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <Header onRefresh={fetchNews} lastUpdated={lastUpdated} />
-      <main className="ml-56 pt-16 p-6">
+      <main className="ml-56 pt-14 p-6">
         <ErrorBoundary>{renderActiveTab()}</ErrorBoundary>
       </main>
     </div>

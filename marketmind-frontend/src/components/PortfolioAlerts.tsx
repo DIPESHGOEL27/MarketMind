@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useState, memo } from "react";
-import { AlertTriangle, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  Loader2,
+  ShieldAlert,
+} from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 interface Alert {
   id: string;
@@ -55,7 +61,6 @@ function PortfolioAlertsInner() {
 
         const generated: Alert[] = [];
 
-        // Find biggest movers
         const sorted = [...data].sort(
           (a, b) => Math.abs(b.change) - Math.abs(a.change),
         );
@@ -70,19 +75,17 @@ function PortfolioAlertsInner() {
           });
         }
 
-        // Alert for any stock down > 2%
         data.forEach((stock: { symbol: string; change: number }) => {
           if (stock.change < -2) {
             generated.push({
               id: `drop-${stock.symbol}`,
               type: "volume",
-              message: `${stock.symbol} dropped ${Math.abs(stock.change).toFixed(2)}% — review your position`,
+              message: `${stock.symbol} dropped ${Math.abs(stock.change).toFixed(2)}% — review position`,
               time: "Just now",
             });
           }
         });
 
-        // Add portfolio summary
         const avgChange =
           data.reduce(
             (sum: number, s: { change: number }) => sum + s.change,
@@ -91,7 +94,7 @@ function PortfolioAlertsInner() {
         generated.push({
           id: "portfolio-avg",
           type: avgChange >= 0 ? "movers" : "volume",
-          message: `Portfolio average: ${avgChange >= 0 ? "+" : ""}${avgChange.toFixed(2)}% across ${data.length} stocks`,
+          message: `Portfolio avg: ${avgChange >= 0 ? "+" : ""}${avgChange.toFixed(2)}% across ${data.length} stocks`,
           time: "Just now",
         });
 
@@ -121,7 +124,6 @@ function PortfolioAlertsInner() {
     };
 
     generateAlerts();
-    // Refresh alerts every 2 minutes
     const interval = setInterval(generateAlerts, 120000);
     return () => clearInterval(interval);
   }, []);
@@ -129,36 +131,54 @@ function PortfolioAlertsInner() {
   const getIcon = (type: string) => {
     switch (type) {
       case "movers":
-        return <TrendingUp className="w-4 h-4 text-green-400" />;
+        return (
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+          </div>
+        );
       case "volume":
-        return <TrendingDown className="w-4 h-4 text-red-400" />;
+        return (
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-500/10">
+            <TrendingDown className="h-3.5 w-3.5 text-red-400" />
+          </div>
+        );
       default:
-        return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
+        return (
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+          </div>
+        );
     }
   };
 
   return (
-    <div className="bg-gray-800/30 border border-gray-700/50 rounded-2xl p-5">
-      <h3 className="text-lg font-bold text-white mb-4">Portfolio Alerts</h3>
+    <div className="rounded-2xl border border-white/[.06] bg-white/[.02] p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <ShieldAlert className="h-4 w-4 text-amber-400" />
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+          Portfolio Alerts
+        </h3>
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-8 text-gray-500">
-          <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          Loading alerts...
+          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          <span className="text-sm">Loading alerts...</span>
         </div>
       ) : (
-        <div className="space-y-3" role="list" aria-label="Portfolio alerts">
+        <div className="space-y-2" role="list" aria-label="Portfolio alerts">
           {alerts.map((alert) => (
             <div
               key={alert.id}
-              className="flex items-start gap-3 p-3 rounded-xl bg-gray-800/50 border border-gray-700/50 hover:border-gray-600 transition-all"
+              className="flex items-start gap-3 rounded-xl border border-white/[.04] bg-white/[.02] p-3 transition-all hover:border-white/[.08]"
               role="listitem"
             >
-              <div className="mt-0.5">{getIcon(alert.type)}</div>
-              <div className="flex-1">
-                <p className="text-sm text-white font-medium">
-                  {alert.message}
+              <div className="mt-0.5 shrink-0">{getIcon(alert.type)}</div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-gray-200">{alert.message}</p>
+                <p className="mt-0.5 text-[11px] text-gray-500">
+                  {alert.time}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">{alert.time}</p>
               </div>
             </div>
           ))}

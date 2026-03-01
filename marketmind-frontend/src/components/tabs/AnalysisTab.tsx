@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, TrendingUp } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 function AnalysisTabInner() {
   const [input, setInput] = useState("");

@@ -36,9 +36,22 @@ export function useWebSocket<T>(
   const connect = useCallback(() => {
     if (!token || unmountedRef.current) return;
 
-    // Resolve WebSocket URL
-    const wsUrl =
-      url || process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws";
+    // Resolve WebSocket URL:
+    // 1. Explicit url prop or NEXT_PUBLIC_WS_URL env var
+    // 2. Derive from NEXT_PUBLIC_API_URL (http→ws, https→wss)
+    // 3. Fall back to relative (same-origin) ws
+    let wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || "";
+    if (!wsUrl) {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      if (apiUrl) {
+        wsUrl = apiUrl.replace(/^http/, "ws") + "/ws";
+      } else if (typeof window !== "undefined") {
+        const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+        wsUrl = `${proto}//${window.location.host}/ws`;
+      } else {
+        wsUrl = "ws://localhost:8080/ws";
+      }
+    }
     const fullUrl = `${wsUrl}?token=${token}`;
 
     try {

@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, memo, useEffect } from "react";
 import { Loader2, Send, MessageSquare } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 interface ChatMessage {
   id: string;

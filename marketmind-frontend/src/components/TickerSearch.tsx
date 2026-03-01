@@ -24,7 +24,7 @@ interface TickerSearchProps {
   isLoading?: boolean;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export function TickerSearch({ onSelect, isLoading }: TickerSearchProps) {
   const [open, setOpen] = React.useState(false);

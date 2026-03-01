@@ -1,10 +1,27 @@
 "use client";
 
 import { memo } from "react";
+import {
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  Globe,
+  Zap,
+  ArrowUpRight,
+  ArrowDownRight,
+  Sparkles,
+  AlertCircle,
+  Newspaper,
+  Clock,
+  ExternalLink,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StockCard, MarketIndex } from "@/components/StockCard";
-import { NewsCard } from "@/components/NewsCardV2";
+import { MarketNews } from "@/components/MarketNews";
 import { PortfolioAlerts } from "@/components/PortfolioAlerts";
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
 
 interface LiveUpdate {
   headline: string;
@@ -52,6 +69,249 @@ interface DashboardTabProps {
   portfolio: string[];
 }
 
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function sentimentColor(label: string) {
+  const l = label.toLowerCase();
+  if (l === "bullish") return "text-emerald-400";
+  if (l === "bearish") return "text-red-400";
+  return "text-amber-400";
+}
+
+function sentimentBg(label: string) {
+  const l = label.toLowerCase();
+  if (l === "bullish") return "from-emerald-500/20 to-emerald-500/5";
+  if (l === "bearish") return "from-red-500/20 to-red-500/5";
+  return "from-amber-500/20 to-amber-500/5";
+}
+
+function sentimentDot(label: string) {
+  const l = label.toLowerCase();
+  if (l === "bullish")
+    return "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,.6)]";
+  if (l === "bearish")
+    return "bg-red-400 shadow-[0_0_8px_rgba(248,113,113,.6)]";
+  return "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,.6)]";
+}
+
+function changeColor(change: number) {
+  return change >= 0 ? "text-emerald-400" : "text-red-400";
+}
+
+function changeBg(change: number) {
+  return change >= 0
+    ? "bg-emerald-500/10 border-emerald-500/20"
+    : "bg-red-500/10 border-red-500/20";
+}
+
+/* ------------------------------------------------------------------ */
+/*  Sub-components                                                     */
+/* ------------------------------------------------------------------ */
+
+function SentimentBanner({ sentiment }: { sentiment: MarketSentiment }) {
+  const score = Math.round(sentiment.sentimentScore * 100);
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-gradient-to-r ${sentimentBg(sentiment.sentimentLabel)} p-5 backdrop-blur-xl`}
+    >
+      {/* Decorative gradient orb */}
+      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl" />
+
+      <div className="relative flex items-center gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/[.06] backdrop-blur-sm">
+          <Sparkles className="h-6 w-6 text-blue-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+              AI Market Sentiment
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold ${changeBg(sentiment.sentimentScore - 0.5)} ${sentimentColor(sentiment.sentimentLabel)}`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${sentimentDot(sentiment.sentimentLabel)}`}
+              />
+              {sentiment.sentimentLabel} &middot; {score}%
+            </span>
+          </div>
+          <p className="text-sm leading-relaxed text-gray-300">
+            {sentiment.summary}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IndexCard({ index }: { index: MarketIndexData }) {
+  const positive = index.change >= 0;
+  return (
+    <div className="group relative overflow-hidden rounded-xl border border-white/[.06] bg-white/[.02] p-4 transition-all hover:border-white/[.12] hover:bg-white/[.04]">
+      <div className="flex items-start justify-between">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-medium uppercase tracking-wide text-gray-400">
+            {index.name}
+          </p>
+          <p className="mt-1 text-xl font-bold tabular-nums text-white">
+            {index.value.toLocaleString(undefined, {
+              maximumFractionDigits: 2,
+            })}
+          </p>
+        </div>
+        <div
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${positive ? "bg-emerald-500/10" : "bg-red-500/10"}`}
+        >
+          {positive ? (
+            <ArrowUpRight className="h-4 w-4 text-emerald-400" />
+          ) : (
+            <ArrowDownRight className="h-4 w-4 text-red-400" />
+          )}
+        </div>
+      </div>
+      <p
+        className={`mt-2 text-sm font-semibold tabular-nums ${changeColor(index.change)}`}
+      >
+        {positive ? "+" : ""}
+        {index.change.toFixed(2)}%
+      </p>
+    </div>
+  );
+}
+
+function StockPill({ stock }: { stock: StockQuote }) {
+  const positive = stock.change >= 0;
+  return (
+    <div className="flex min-w-[160px] items-center gap-3 rounded-xl border border-white/[.06] bg-white/[.02] px-4 py-3 transition-all hover:border-white/[.12] hover:bg-white/[.04]">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-xs font-bold text-blue-400">
+        {stock.symbol.slice(0, 3)}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-white">{stock.symbol}</p>
+        <p className="text-xs tabular-nums text-gray-400">
+          ${stock.price.toFixed(2)}
+        </p>
+      </div>
+      <span
+        className={`inline-flex items-center gap-0.5 rounded-md border px-2 py-0.5 text-xs font-bold tabular-nums ${changeBg(stock.change)} ${changeColor(stock.change)}`}
+      >
+        {positive ? (
+          <TrendingUp className="h-3 w-3" />
+        ) : (
+          <TrendingDown className="h-3 w-3" />
+        )}
+        {positive ? "+" : ""}
+        {stock.change.toFixed(2)}%
+      </span>
+    </div>
+  );
+}
+
+function LiveUpdateCard({ update }: { update: LiveUpdate }) {
+  return (
+    <a
+      href={update.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex items-start gap-3 rounded-lg border border-transparent p-3 transition-all hover:border-white/[.06] hover:bg-white/[.02]"
+    >
+      <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-red-500/10">
+        <Zap className="h-3.5 w-3.5 text-red-400" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm leading-snug text-gray-200 group-hover:text-white">
+          {update.headline}
+        </p>
+        <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-500">
+          <span className="font-medium">{update.source}</span>
+          <span>&middot;</span>
+          <span className="flex items-center gap-0.5">
+            <Clock className="h-3 w-3" />
+            {update.time}
+          </span>
+        </div>
+      </div>
+      <ExternalLink className="mt-1 h-3.5 w-3.5 shrink-0 text-gray-600 opacity-0 transition-opacity group-hover:opacity-100" />
+    </a>
+  );
+}
+
+function NewsCompactCard({ item }: { item: NewsItem }) {
+  const sentStyles = {
+    bullish: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    bearish: "bg-red-500/10 text-red-400 border-red-500/20",
+    neutral: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  };
+  return (
+    <div className="group rounded-xl border border-white/[.06] bg-white/[.02] p-4 transition-all hover:border-white/[.12] hover:bg-white/[.04]">
+      <div className="mb-2 flex items-center gap-2">
+        {item.sentiment && (
+          <span
+            className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase ${sentStyles[item.sentiment]}`}
+          >
+            {item.sentiment}
+          </span>
+        )}
+        {item.category && (
+          <span className="rounded-md bg-white/[.04] px-2 py-0.5 text-[10px] text-gray-400">
+            {item.category}
+          </span>
+        )}
+        {item.ticker && item.ticker !== "MARKET" && (
+          <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-400">
+            ${item.ticker}
+          </span>
+        )}
+      </div>
+      <h4 className="mb-1 text-sm font-semibold leading-snug text-white">
+        {item.title}
+      </h4>
+      <p className="line-clamp-2 text-xs leading-relaxed text-gray-400">
+        {item.summary}
+      </p>
+      <div className="mt-3 flex items-center justify-between border-t border-white/[.04] pt-2 text-[11px] text-gray-500">
+        <span className="font-medium">{item.source || "MarketMind AI"}</span>
+        {item.date && (
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {new Date(item.date).toLocaleDateString()}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Skeleton Loaders                                                   */
+/* ------------------------------------------------------------------ */
+
+function IndexSkeleton() {
+  return (
+    <div className="rounded-xl border border-white/[.06] bg-white/[.02] p-4">
+      <Skeleton className="mb-2 h-3 w-16 bg-white/[.06]" />
+      <Skeleton className="mb-2 h-6 w-28 bg-white/[.06]" />
+      <Skeleton className="h-4 w-14 bg-white/[.06]" />
+    </div>
+  );
+}
+
+function NewsSkeleton() {
+  return (
+    <div className="rounded-xl border border-white/[.06] bg-white/[.02] p-4">
+      <Skeleton className="mb-2 h-3 w-24 bg-white/[.06]" />
+      <Skeleton className="mb-1 h-4 w-3/4 bg-white/[.06]" />
+      <Skeleton className="h-3 w-full bg-white/[.06]" />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main Dashboard                                                     */
+/* ------------------------------------------------------------------ */
+
 function DashboardTabInner({
   stockData,
   marketIndices,
@@ -59,202 +319,156 @@ function DashboardTabInner({
   news,
   loading,
 }: DashboardTabProps) {
+  const hasIndices = marketIndices.length > 0;
+  const hasStocks = stockData.length > 0;
+  const hasNews = news.length > 0;
+  const hasLiveUpdates =
+    marketSentiment?.liveUpdates && marketSentiment.liveUpdates.length > 0;
+
   return (
-    <>
-      {/* Page Title + Sentiment Badge */}
-      <div className="mb-6 flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-gray-400">
-            Market indices + Your portfolio stocks
-          </p>
-        </div>
-        {marketSentiment && (
-          <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4 flex gap-4 items-center">
-            <div
-              className={`w-3 h-3 rounded-full ${
-                marketSentiment.sentimentLabel === "Bullish"
-                  ? "bg-green-500 shadow-[0_0_10px_#22c55e]"
-                  : marketSentiment.sentimentLabel === "Bearish"
-                    ? "bg-red-500 shadow-[0_0_10px_#ef4444]"
-                    : "bg-gray-400"
-              }`}
-            />
-            <div>
-              <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">
-                AI Sentiment
-              </div>
-              <div className="font-bold flex items-center gap-2">
-                {marketSentiment.sentimentLabel}
-                <span className="text-sm font-normal text-gray-400">
-                  ({(marketSentiment.sentimentScore * 100).toFixed(0)}%)
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
+    <div className="space-y-6">
+      {/* ---- Header Row ---- */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-white">
+          Dashboard
+        </h1>
+        <p className="mt-0.5 text-sm text-gray-400">
+          Real-time market overview &amp; portfolio tracking
+        </p>
       </div>
 
-      {/* AI Summary Banner */}
-      {marketSentiment && (
-        <div className="mb-8 p-5 bg-blue-600/10 border border-blue-500/20 rounded-2xl relative overflow-hidden group">
-          <div className="flex gap-4 items-start relative z-10">
-            <div
-              className="p-3 bg-blue-600/20 rounded-xl text-2xl"
-              aria-hidden="true"
-            >
-              🤖
-            </div>
+      {/* ---- AI Sentiment Banner ---- */}
+      {marketSentiment && <SentimentBanner sentiment={marketSentiment} />}
+
+      {/* ---- Portfolio Stocks Ribbon ---- */}
+      {hasStocks && (
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-blue-400" />
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+              Your Portfolio
+            </h2>
+          </div>
+          <div
+            className="flex gap-3 overflow-x-auto pb-1"
+            role="list"
+            aria-label="Portfolio stocks"
+          >
+            {stockData.map((s) => (
+              <StockPill key={s.symbol} stock={s} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ---- Market Indices Grid ---- */}
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <Globe className="h-4 w-4 text-purple-400" />
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Market Indices
+          </h2>
+        </div>
+        {loading && !hasIndices ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <IndexSkeleton key={i} />
+            ))}
+          </div>
+        ) : hasIndices ? (
+          <div
+            className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+            role="list"
+            aria-label="Market indices"
+          >
+            {marketIndices.map((idx) => (
+              <IndexCard key={idx.name} index={idx} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 rounded-xl border border-white/[.06] bg-white/[.02] px-5 py-8">
+            <AlertCircle className="h-5 w-5 shrink-0 text-gray-500" />
             <div>
-              <p className="text-blue-200 text-sm leading-relaxed italic">
-                &quot;{marketSentiment.summary}&quot;
+              <p className="text-sm font-medium text-gray-300">
+                Market indices unavailable
+              </p>
+              <p className="text-xs text-gray-500">
+                Unable to fetch live data. The backend API may be starting
+                up&mdash;try refreshing in a moment.
               </p>
             </div>
           </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/5 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
-        </div>
-      )}
-
-      {/* Stock Price Cards */}
-      {stockData.length > 0 && (
-        <div
-          className="flex gap-4 mb-6 overflow-x-auto pb-2"
-          role="list"
-          aria-label="Portfolio stocks"
-        >
-          {stockData.map((stock) => (
-            <StockCard
-              key={stock.symbol}
-              symbol={stock.symbol}
-              price={stock.price}
-              change={stock.change}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Market Indices */}
-      <div
-        className="grid grid-cols-4 gap-4 mb-8"
-        role="list"
-        aria-label="Market indices"
-      >
-        {marketIndices.length > 0 ? (
-          marketIndices.map((index) => (
-            <MarketIndex key={index.name} {...index} />
-          ))
-        ) : (
-          <div className="col-span-4 py-8 bg-gray-800/20 border border-gray-700/30 rounded-2xl text-center text-gray-500">
-            {loading
-              ? "Fetching global market data..."
-              : "Real-time market indices currently unavailable."}
-          </div>
         )}
-      </div>
+      </section>
 
-      {/* News + Alerts Grid */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* Market News Column */}
-        <div className="col-span-2 space-y-8">
-          {/* Live Updates Ticker */}
-          {marketSentiment?.liveUpdates &&
-            marketSentiment.liveUpdates.length > 0 && (
-              <div className="bg-gray-800/30 border border-gray-700/50 rounded-2xl p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <span
-                    className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"
-                    aria-hidden="true"
-                  />
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">
-                    Latest Live Updates
-                  </h2>
-                </div>
-                <div className="space-y-4">
-                  {marketSentiment.liveUpdates.slice(0, 5).map((update) => (
-                    <a
-                      key={update.url}
-                      href={update.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex justify-between items-start group border-b border-gray-700/30 pb-4 last:border-0 last:pb-0"
-                    >
-                      <div className="flex-1 pr-4">
-                        <p className="text-white group-hover:text-blue-400 transition-colors">
-                          {update.headline}
-                        </p>
-                        <div className="flex gap-3 mt-1">
-                          <span className="text-xs text-gray-500 font-bold">
-                            {update.source}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {update.time}
-                          </span>
-                        </div>
-                      </div>
-                      <span
-                        className="text-gray-600 group-hover:text-blue-400"
-                        aria-hidden="true"
-                      >
-                        →
-                      </span>
-                    </a>
-                  ))}
-                </div>
+      {/* ---- 3-Column Content Grid ---- */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left 2 cols — News + Live Updates */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Live Updates */}
+          {hasLiveUpdates && (
+            <section className="rounded-2xl border border-white/[.06] bg-white/[.02] p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                </span>
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  Live Updates
+                </h2>
               </div>
-            )}
+              <div className="space-y-1">
+                {marketSentiment!.liveUpdates.slice(0, 5).map((u, i) => (
+                  <LiveUpdateCard key={`${u.url}-${i}`} update={u} />
+                ))}
+              </div>
+            </section>
+          )}
 
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Market News</h2>
+          {/* Market News */}
+          <section>
+            <div className="mb-3 flex items-center gap-2">
+              <Newspaper className="h-4 w-4 text-indigo-400" />
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                Market News
+              </h2>
             </div>
             {loading ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {[1, 2, 3].map((n) => (
-                  <div
-                    key={n}
-                    className="p-5 rounded-2xl bg-gray-800/50 border border-gray-700"
-                  >
-                    <Skeleton className="h-5 w-24 mb-3" />
-                    <Skeleton className="h-6 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-full" />
-                  </div>
+                  <NewsSkeleton key={n} />
+                ))}
+              </div>
+            ) : hasNews ? (
+              <div className="space-y-3">
+                {news.slice(0, 4).map((item, i) => (
+                  <NewsCompactCard
+                    key={`${item.ticker}-${item.title}-${i}`}
+                    item={item}
+                  />
                 ))}
               </div>
             ) : (
-              <div className="space-y-4">
-                {news.slice(0, 3).map((item) => (
-                  <NewsCard
-                    key={`${item.ticker}-${item.title}`}
-                    title={item.title}
-                    summary={item.summary}
-                    ticker={item.ticker}
-                    sentiment={item.sentiment}
-                    category={item.category}
-                    source={item.source}
-                    time={
-                      item.date
-                        ? new Date(item.date).toLocaleDateString()
-                        : undefined
-                    }
-                  />
-                ))}
-                {news.length === 0 && (
-                  <div className="text-center py-12 text-gray-500">
-                    No news yet. Add tickers to your portfolio to get
-                    personalized news.
-                  </div>
-                )}
+              <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-white/[.08] bg-white/[.01] py-12 text-center">
+                <Newspaper className="h-8 w-8 text-gray-600" />
+                <p className="text-sm text-gray-400">No news available</p>
+                <p className="text-xs text-gray-500">
+                  Add tickers to your portfolio or check back later
+                </p>
               </div>
             )}
-          </div>
+          </section>
+
+          {/* AI Market Brief */}
+          <MarketNews />
         </div>
 
-        {/* Portfolio Alerts Column */}
-        <div className="col-span-1">
+        {/* Right column — Portfolio Alerts */}
+        <div className="space-y-6">
           <PortfolioAlerts />
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

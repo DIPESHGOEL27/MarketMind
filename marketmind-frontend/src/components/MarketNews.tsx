@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper } from "lucide-react";
+import { Sparkles, Clock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 export function MarketNews() {
@@ -15,7 +14,7 @@ export function MarketNews() {
     const fetchMarketNews = async () => {
       try {
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+          process.env.NEXT_PUBLIC_API_URL || "";
         const res = await fetch(`${apiUrl}/api/market-news`);
         const data = await res.json();
         if (data.summary) {
@@ -41,41 +40,44 @@ export function MarketNews() {
 
   if (loading) {
     return (
-      <Card className="border border-zinc-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 h-full">
-        <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
-          <CardTitle className="text-sm font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-2">
-            <Newspaper className="w-4 h-4" /> Market Brief
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4 space-y-3">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-[90%]" />
-          <Skeleton className="h-4 w-[95%]" />
-          <Skeleton className="h-4 w-[85%]" />
-        </CardContent>
-      </Card>
+      <div className="rounded-2xl border border-white/[.06] bg-white/[.02] p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-indigo-400" />
+          <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+            AI Market Brief
+          </span>
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-full bg-white/[.06]" />
+          <Skeleton className="h-4 w-[90%] bg-white/[.06]" />
+          <Skeleton className="h-4 w-[95%] bg-white/[.06]" />
+          <Skeleton className="h-4 w-[85%] bg-white/[.06]" />
+        </div>
+      </div>
     );
   }
 
   if (!summary) return null;
 
   return (
-    <Card className="border border-zinc-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 h-full flex flex-col">
-      <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
-            <Newspaper className="w-4 h-4" /> Market Brief
-          </CardTitle>
-          {lastUpdated && (
-            <span className="text-xs text-zinc-400">Updated {lastUpdated}</span>
-          )}
+    <div className="rounded-2xl border border-white/[.06] bg-white/[.02] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-indigo-400" />
+          <span className="text-xs font-semibold uppercase tracking-widest text-indigo-400">
+            AI Market Brief
+          </span>
         </div>
-      </CardHeader>
-      <CardContent className="pt-4 flex-1">
-        <div className="prose prose-sm dark:prose-invert max-w-none text-zinc-600 dark:text-zinc-300">
-          <ReactMarkdown>{summary}</ReactMarkdown>
-        </div>
-      </CardContent>
-    </Card>
+        {lastUpdated && (
+          <span className="flex items-center gap-1 text-[11px] text-gray-500">
+            <Clock className="h-3 w-3" />
+            {lastUpdated}
+          </span>
+        )}
+      </div>
+      <div className="prose prose-sm prose-invert max-w-none text-gray-300 prose-headings:text-white prose-strong:text-white prose-a:text-blue-400">
+        <ReactMarkdown>{summary}</ReactMarkdown>
+      </div>
+    </div>
   );
 }

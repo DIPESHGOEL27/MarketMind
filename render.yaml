@@ -12,13 +12,13 @@ services:
     healthCheckPath: /health
     envVars:
       - key: GEMINI_API_KEY
-        sync: false  # Set manually in Render dashboard
+        sync: false # Set manually in Render dashboard
       - key: FINNHUB_API_KEY
         sync: false
       - key: NEWSAPI_KEY
         sync: false
       - key: JWT_SECRET
-        generateValue: true  # Auto-generate a secure random value
+        generateValue: true # Auto-generate a secure random value
       - key: CORS_ORIGINS
         value: https://market-mind-dashboard.vercel.app
       - key: PORT
