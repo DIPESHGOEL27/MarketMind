@@ -170,7 +170,29 @@ export default function Dashboard() {
 
       const data = await res.json();
 
-      if (data.summary && !Array.isArray(data)) {
+      // /api/market-news returns { summary, articles[], updated }
+      if (
+        data.articles &&
+        Array.isArray(data.articles) &&
+        data.articles.length > 0
+      ) {
+        setNews(
+          data.articles.map((item: NewsItem) => ({
+            ticker: item.ticker || "MARKET",
+            title: item.title,
+            summary: item.summary,
+            date: item.date || new Date().toISOString(),
+            sentiment:
+              (item.sentiment?.toLowerCase() as
+                | "bullish"
+                | "bearish"
+                | "neutral") || "neutral",
+            category: item.category || "General",
+            source: item.source || "MarketMind AI",
+          })),
+        );
+      } else if (data.summary && !Array.isArray(data)) {
+        // Fallback: summary-only response
         setNews([
           {
             ticker: "MARKET",
@@ -183,6 +205,7 @@ export default function Dashboard() {
           },
         ]);
       } else if (Array.isArray(data)) {
+        // /api/news returns array directly
         setNews(
           data.map((item: NewsItem) => ({
             ticker: item.ticker,
@@ -235,13 +258,25 @@ export default function Dashboard() {
     fetchIndices();
     fetchSentiment();
 
-    const interval = setInterval(() => {
+    // Refresh quotes, indices, sentiment every 60s
+    const fastInterval = setInterval(() => {
       fetchQuotes();
       fetchIndices();
       fetchSentiment();
     }, 60000);
 
-    return () => clearInterval(interval);
+    // Refresh news every 14 min (also keeps Render backend alive)
+    const keepAliveInterval = setInterval(
+      () => {
+        fetchNews();
+      },
+      14 * 60 * 1000,
+    );
+
+    return () => {
+      clearInterval(fastInterval);
+      clearInterval(keepAliveInterval);
+    };
   }, [fetchNews, fetchQuotes, fetchIndices, fetchSentiment]);
 
   // ---------- Render ----------

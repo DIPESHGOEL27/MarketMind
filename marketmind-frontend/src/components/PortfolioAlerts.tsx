@@ -176,9 +176,7 @@ function PortfolioAlertsInner() {
               <div className="mt-0.5 shrink-0">{getIcon(alert.type)}</div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-gray-200">{alert.message}</p>
-                <p className="mt-0.5 text-[11px] text-gray-500">
-                  {alert.time}
-                </p>
+                <p className="mt-0.5 text-[11px] text-gray-500">{alert.time}</p>
               </div>
             </div>
           ))}

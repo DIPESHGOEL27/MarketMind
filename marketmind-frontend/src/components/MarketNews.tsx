@@ -13,8 +13,7 @@ export function MarketNews() {
   useEffect(() => {
     const fetchMarketNews = async () => {
       try {
-        const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
         const res = await fetch(`${apiUrl}/api/market-news`);
         const data = await res.json();
         if (data.summary) {

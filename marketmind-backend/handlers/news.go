@@ -105,35 +105,82 @@ func FetchNews(c *gin.Context) {
 }
 
 func FetchMarketNews(c *gin.Context) {
-	// Check cache
-	if cached, ok := marketNewsCacheSvc.Get("market"); ok {
-		c.JSON(http.StatusOK, gin.H{"summary": cached, "updated": time.Now()})
-		return
+	// Check cache for articles
+	type marketNewsResponse struct {
+		Summary  string           `json:"summary"`
+		Articles []models.NewsItem `json:"articles"`
+	}
+
+	cacheKey := "market-articles"
+	if cached, ok := marketNewsCacheSvc.Get(cacheKey); ok {
+		// cached holds JSON string of the full response
+		var resp marketNewsResponse
+		if err := json.Unmarshal([]byte(cached), &resp); err == nil {
+			resp.Articles = appendDateIfMissing(resp.Articles)
+			c.JSON(http.StatusOK, gin.H{"summary": resp.Summary, "articles": resp.Articles, "updated": time.Now()})
+			return
+		}
 	}
 
 	gemini := services.NewGeminiClient()
 	if !gemini.Available() {
 		c.JSON(http.StatusOK, gin.H{
-			"summary": "Market data currently unavailable. Please configure GEMINI_API_KEY.",
-			"updated": time.Now(),
+			"summary":  "Market data currently unavailable. Please configure GEMINI_API_KEY.",
+			"articles": []models.NewsItem{},
+			"updated":  time.Now(),
 		})
 		return
 	}
 
 	var result struct {
-		Summary string `json:"summary"`
+		Summary  string `json:"summary"`
+		Articles []struct {
+			Title     string `json:"title"`
+			Summary   string `json:"summary"`
+			Ticker    string `json:"ticker"`
+			Sentiment string `json:"sentiment"`
+			Source    string `json:"source"`
+			Category  string `json:"category"`
+		} `json:"articles"`
 	}
 
 	err := gemini.GenerateJSON(services.GeminiRequest{
-		Model:         services.GeminiFlash,
-		Prompt:        "Summarize the most important stock market news for today. Focus on major indices, notable movers, and key economic data. Be concise (3-4 sentences).",
+		Model: services.GeminiFlash,
+		Prompt: `You are a financial news analyst. Provide today's top stock market news.
+
+Return:
+1. "summary": A 3-4 sentence overview of today's market
+2. "articles": An array of 6 important market news items, each with:
+   - "title": Headline (concise, factual)
+   - "summary": 1-2 sentence description
+   - "ticker": Most relevant stock ticker (e.g. AAPL, NVDA, SPY) or "MARKET" for broad market news
+   - "sentiment": "bullish", "bearish", or "neutral"
+   - "source": News source name
+   - "category": One of: Technology, Finance, Healthcare, Energy, Crypto, Economy, Earnings, Other
+
+Focus on major US market movers, earnings, Fed/economic data, and sector trends. Use real current news.`,
 		UseSearchTool: true,
 		JSONSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
 				"summary": map[string]interface{}{"type": "string"},
+				"articles": map[string]interface{}{
+					"type": "array",
+					"items": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"title":     map[string]interface{}{"type": "string"},
+							"summary":   map[string]interface{}{"type": "string"},
+							"ticker":    map[string]interface{}{"type": "string"},
+							"sentiment": map[string]interface{}{"type": "string", "enum": []string{"bullish", "bearish", "neutral"}},
+							"source":    map[string]interface{}{"type": "string"},
+							"category":  map[string]interface{}{"type": "string"},
+						},
+						"required": []string{"title", "summary", "sentiment"},
+					},
+				},
 			},
-			"required": []string{"summary"},
+			"required": []string{"summary", "articles"},
 		},
 	}, &result)
 
@@ -141,8 +188,41 @@ func FetchMarketNews(c *gin.Context) {
 		result.Summary = "Market is currently mixed with tech sector showing strength. Investors await upcoming economic data."
 	}
 
-	marketNewsCacheSvc.Set("market", result.Summary)
-	c.JSON(http.StatusOK, gin.H{"summary": result.Summary, "updated": time.Now()})
+	// Convert to NewsItem slice
+	articles := make([]models.NewsItem, 0, len(result.Articles))
+	for _, a := range result.Articles {
+		ticker := a.Ticker
+		if ticker == "" {
+			ticker = "MARKET"
+		}
+		articles = append(articles, models.NewsItem{
+			Ticker:    ticker,
+			Title:     a.Title,
+			Summary:   a.Summary,
+			Date:      time.Now().Format("2006-01-02"),
+			Sentiment: a.Sentiment,
+			Source:    a.Source,
+			Category:  a.Category,
+		})
+	}
+
+	// Cache the response
+	respObj := marketNewsResponse{Summary: result.Summary, Articles: articles}
+	if respBytes, err := json.Marshal(respObj); err == nil {
+		marketNewsCacheSvc.Set(cacheKey, string(respBytes))
+	}
+
+	c.JSON(http.StatusOK, gin.H{"summary": result.Summary, "articles": articles, "updated": time.Now()})
+}
+
+func appendDateIfMissing(items []models.NewsItem) []models.NewsItem {
+	today := time.Now().Format("2006-01-02")
+	for i := range items {
+		if items[i].Date == "" {
+			items[i].Date = today
+		}
+	}
+	return items
 }
 
 func GetNewsItemFromGemini(ticker string) models.NewsItem {
